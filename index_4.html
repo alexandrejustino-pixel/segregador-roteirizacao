@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Segregador · Roteirização V2</title>
+<style>
+  :root{
+    --bg:#0e1117; --surface:#161b22; --surface2:#1c2230;
+    --border:#262d3a; --border-lit:#333c4d;
+    --text:#e6edf3; --text-dim:#8b949e; --text-mute:#6e7681;
+    --accent:#2f81f7; --accent-soft:rgba(47,129,247,.12);
+    --warn:#d29922; --warn-soft:rgba(210,153,34,.12);
+    --ok:#3fb950; --ok-soft:rgba(63,185,80,.12);
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:28px 20px 60px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  header .logo{width:34px;height:34px;border-radius:8px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px}
+  header h1{font-size:17px;font-weight:600;letter-spacing:.01em}
+  header .ver{margin-left:auto;font-size:12px;color:var(--text-mute);font-variant-numeric:tabular-nums}
+  .sub{color:var(--text-dim);font-size:13px;margin:0 0 24px 46px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+  @media(max-width:620px){.grid2{grid-template-columns:1fr}.sub{margin-left:0}}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .card-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .dot.blue{background:var(--accent)} .dot.amber{background:var(--warn)}
+
+  .dz{border:1.5px dashed var(--border-lit);border-radius:var(--radius-sm);padding:22px 12px;text-align:center;cursor:pointer;transition:.15s}
+  .dz:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .dz.amber:hover{border-color:var(--warn);background:var(--warn-soft)}
+  .dz .ico{font-size:26px;display:block;margin-bottom:6px;opacity:.7}
+  .dz p{font-size:12.5px;color:var(--text-dim)}
+  .dz.over{border-color:var(--accent);background:var(--accent-soft)}
+  .status{margin-top:10px;font-size:12px;color:var(--text-dim);min-height:16px;display:flex;align-items:center;gap:6px}
+  .status .ok{color:var(--ok)}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px}
+  .stat .lbl{font-size:11.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em}
+  .stat .val{font-size:23px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+
+  .rule{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;margin-bottom:7px}
+  .rule.needs{border-color:var(--warn-soft)}
+  .rule.vol{border-color:rgba(210,153,34,.25)}
+  .rnum{width:22px;height:22px;border-radius:50%;background:var(--surface2);color:var(--text-dim);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .rule.vol .rnum{background:var(--warn-soft);color:var(--warn)}
+  .rbody{flex:1;min-width:0}
+  .rname{font-size:13px;font-weight:600}
+  .rtag{font-size:11px;color:var(--text-mute);margin-top:1px}
+  .rcount{min-width:70px;text-align:right;font-size:16px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+  .rule.vol .rcount{color:var(--warn)}
+  .rcount.zero{color:var(--text-mute);font-size:13px;font-weight:400}
+  .rcount.wait{color:var(--warn);font-size:11px;font-weight:500}
+  .rcount.dash{color:var(--text-mute);font-size:13px;font-weight:400}
+
+  .btn{border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;padding:6px 12px;transition:.15s;font-family:inherit}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .btn-ghost{background:transparent;border:1px solid var(--border-lit);color:var(--text-dim)}
+  .btn-ghost:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .btn-primary{background:var(--accent);color:#fff;padding:9px 18px;font-size:13px}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.1)}
+
+  .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px}
+  .msg{font-size:13px;margin-left:auto}
+  .msg.ok{color:var(--ok)} .msg.warn{color:var(--warn)}
+
+  footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--text-mute);line-height:1.7}
+  footer code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">&#128230;</div>
+    <h1>Segregador &middot; Roteiriza&ccedil;&atilde;o V2</h1>
+    <span class="ver" id="ver"></span>
+  </header>
+  <p class="sub">Importe a Base Roteiriz&aacute;vel e a Query de Volumosos para gerar os arquivos.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title"><span class="dot blue"></span> Base Roteiriz&aacute;vel</div>
+      <div class="dz" id="dz-main">
+        <span class="ico">&#8593;</span>
+        <p>Arraste o CSV principal<br>ou <strong>clique para selecionar</strong></p>
+      </div>
+      <input type="file" id="fi-main" accept=".csv,.txt" hidden>
+      <div class="status" id="st-main"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot amber"></span> Query de Volumosos</div>
+      <div class="dz amber" id="dz-bulky">
+        <span class="ico">&#8593;</span>
+        <p>Arraste o CSV de volumosos<br>ou <strong>clique para selecionar</strong></p>
+      </div>
+      <input type="file" id="fi-bulky" accept=".csv,.txt" hidden>
+      <div class="status" id="st-bulky"></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="lbl">Linhas da base</div><div class="val" id="stat-rows">&mdash;</div></div>
+    <div class="stat"><div class="lbl">IDs volumosos</div><div class="val" id="stat-bulky">&mdash;</div></div>
+    <div class="stat"><div class="lbl">Total segregado</div><div class="val" id="stat-total">&mdash;</div></div>
+  </div>
+
+  <div id="rules"></div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btn-all" disabled>&#8595; Baixar todos (ZIP com os CSV)</button>
+    <button class="btn btn-ghost" id="btn-reset">&#8634; Limpar</button>
+    <span class="msg" id="msg"></span>
+  </div>
+
+  <footer>
+    Arquivos de ciclo cont&ecirc;m a coluna <code>Id_Unidad</code> &middot; o arquivo Volumosos cont&eacute;m a coluna <code>SHP_SHIPMENT_ID</code>.<br>
+    Os downloads s&atilde;o salvos automaticamente na pasta padr&atilde;o do navegador (normalmente <strong>Downloads</strong>).<br>
+    Tudo processado no seu navegador &mdash; nenhum dado &eacute; enviado para servidores.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var today=new Date();
+  var dateStr=today.getFullYear().toString()+
+    String(today.getMonth()+1).padStart(2,'0')+
+    String(today.getDate()).padStart(2,'0');
+  document.getElementById('ver').textContent=today.toLocaleDateString('pt-BR');
+
+  var rawData=[], bulkyList=[], mainLoaded=false, bulkyLoaded=false, results=[];
+
+  // source: 'main' usa a Base Roteirizavel | 'bulky' usa a Query de Volumosos
+  var RULES=[
+    {id:1,label:'FAKE-UTR',tag:'CICLO FINAL = FAKE-UTR',file:'IDs_FAKE-UTR_'+dateStr+'.csv',col:'Id_Unidad',source:'main',
+      get:function(){return RULES_main('FAKE-UTR');}},
+    {id:2,label:'FAKE-OTR',tag:'CICLO FINAL = FAKE-OTR',file:'IDs_FAKE-OTR_'+dateStr+'.csv',col:'Id_Unidad',source:'main',
+      get:function(){return RULES_main('FAKE-OTR');}},
+    {id:3,label:'CHP',tag:'CICLO FINAL = CHP',file:'IDs_CHP_'+dateStr+'.csv',col:'Id_Unidad',source:'main',
+      get:function(){return RULES_main('CHP');}},
+    {id:4,label:'Volumosos',tag:'SHP_SHIPMENT_ID, sem repetir 1, 2 e 3',file:'Volumosos_'+dateStr+'.csv',col:'SHP_SHIPMENT_ID',source:'bulky',vol:true,needsBoth:true,
+      get:function(){
+        var ex=new Set();
+        RULES_main('FAKE-UTR').forEach(function(v){ex.add(String(v));});
+        RULES_main('FAKE-OTR').forEach(function(v){ex.add(String(v));});
+        RULES_main('CHP').forEach(function(v){ex.add(String(v));});
+        return bulkyList.filter(function(v){return !ex.has(String(v));});
+      }},
+    {id:5,label:'AM',tag:'CICLO FINAL = AM',file:'IDs_AM_'+dateStr+'.csv',col:'Id_Unidad',source:'main',
+      get:function(){return RULES_main('AM');}}
+  ];
+
+  function RULES_main(ciclo){
+    return rawData.filter(function(r){return r['CICLO FINAL']===ciclo;})
+      .map(function(r){return r['Id_Unidad'];}).filter(Boolean);
+  }
+
+  function detectSep(h){
+    var c={',':(h.match(/,/g)||[]).length,';':(h.match(/;/g)||[]).length,'\t':(h.match(/\t/g)||[]).length};
+    return Object.keys(c).reduce(function(a,b){return c[a]>c[b]?a:b;});
+  }
+  function splitLine(line,sep){
+    var r=[],cur='',q=false;
+    for(var i=0;i<line.length;i++){var ch=line[i];
+      if(ch==='"'){q=!q;}else if(ch===sep&&!q){r.push(cur);cur='';}else{cur+=ch;}}
+    r.push(cur);return r;
+  }
+  function csvToRows(text){
+    var lines=text.replace(/^\uFEFF/,'').trim().split(/\r?\n/);
+    if(!lines.length)return[];
+    var sep=detectSep(lines[0]);
+    var cols=splitLine(lines[0],sep).map(function(c){return c.trim().replace(/^"|"$/g,'');});
+    var rows=[];
+    for(var i=1;i<lines.length;i++){
+      var vals=splitLine(lines[i],sep);
+      if(vals.length<2)continue;
+      var row={};
+      cols.forEach(function(c,j){row[c]=(vals[j]||'').trim().replace(/^"|"$/g,'');});
+      rows.push(row);
+    }
+    return rows;
+  }
+  function fmt(n){return Number(n).toLocaleString('pt-BR');}
+  function setMsg(t,type){var m=document.getElementById('msg');m.className='msg '+(type||'');m.textContent=t;}
+
+  function readFile(file,isBulky){
+    var rd=new FileReader();
+    rd.onload=function(ev){
+      try{
+        if(isBulky){
+          var rows=csvToRows(ev.target.result);
+          // encontra a coluna SHP_SHIPMENT_ID de forma tolerante (ignora maiusc/espaco/underscore)
+          var key=null;
+          if(rows.length){
+            var norm=function(s){return String(s).toUpperCase().replace(/[^A-Z0-9]/g,'');};
+            var target=norm('SHP_SHIPMENT_ID');
+            Object.keys(rows[0]).forEach(function(k){ if(norm(k)===target) key=k; });
+          }
+          if(!key){
+            bulkyList=[]; bulkyLoaded=false;
+            document.getElementById('st-bulky').innerHTML='Coluna SHP_SHIPMENT_ID n&atilde;o encontrada no arquivo.';
+            document.getElementById('stat-bulky').textContent='\u2014';
+            process(); return;
+          }
+          // puxa TODOS os SHP_SHIPMENT_ID da base de volumosos
+          bulkyList=rows.map(function(r){return String(r[key]).trim();}).filter(Boolean);
+          bulkyLoaded=true;
+          document.getElementById('st-bulky').innerHTML='<span class="ok">&#10004;</span> '+file.name+' &middot; '+fmt(bulkyList.length)+' SHP_SHIPMENT_ID';
+          document.getElementById('stat-bulky').textContent=fmt(bulkyList.length);
+        }else{
+          rawData=csvToRows(ev.target.result); mainLoaded=true;
+          document.getElementById('st-main').innerHTML='<span class="ok">&#10004;</span> '+file.name+' &middot; '+fmt(rawData.length)+' linhas';
+          document.getElementById('stat-rows').textContent=fmt(rawData.length);
+        }
+        process();
+      }catch(err){
+        document.getElementById(isBulky?'st-bulky':'st-main').textContent='Erro: '+err.message;
+      }
+    };
+    rd.readAsText(file,'utf-8');
+  }
+
+  function setupDrop(dzId,fiId,isBulky){
+    var dz=document.getElementById(dzId), fi=document.getElementById(fiId);
+    dz.addEventListener('click',function(){fi.click();});
+    dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('over');});
+    dz.addEventListener('dragleave',function(){dz.classList.remove('over');});
+    dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('over');
+      var f=e.dataTransfer.files[0]; if(f)readFile(f,isBulky);});
+    fi.addEventListener('change',function(){if(fi.files[0])readFile(fi.files[0],isBulky);});
+  }
+  setupDrop('dz-main','fi-main',false);
+  setupDrop('dz-bulky','fi-bulky',true);
+
+  function ready(rule){
+    if(rule.needsBoth) return mainLoaded && bulkyLoaded;
+    if(rule.source==='main')return mainLoaded;
+    if(rule.source==='bulky')return bulkyLoaded;
+    return false;
+  }
+
+  function process(){
+    results=RULES.map(function(rule){
+      var ids=ready(rule)?rule.get():[];
+      return {rule:rule, ids:ids, pending:!ready(rule)};
+    });
+    renderRules();
+    var total=results.filter(function(r){return !r.pending;}).reduce(function(s,r){return s+r.ids.length;},0);
+    document.getElementById('stat-total').textContent=mainLoaded||bulkyLoaded?fmt(total):'\u2014';
+    var anyReady=results.some(function(r){return !r.pending && r.ids.length>0;});
+    document.getElementById('btn-all').disabled=!anyReady;
+
+    if(!mainLoaded&&!bulkyLoaded) setMsg('','');
+    else if(!mainLoaded) setMsg('Carregue a Base Roteiriz\u00e1vel para os arquivos de ciclo.','warn');
+    else if(!bulkyLoaded) setMsg('Carregue a Query de Volumosos para o arquivo Volumosos.','warn');
+    else setMsg('Pronto! Arquivos gerados.','ok');
+  }
+
+  function renderRules(){
+    var area=document.getElementById('rules');
+    area.innerHTML=RULES.map(function(rule){
+      var res=results.find(function(r){return r.rule.id===rule.id;});
+      var pending=res?res.pending:true;
+      var n=res&&!pending?res.ids.length:null;
+      var countHtml='<span class="rcount dash">\u2014</span>';
+      if(n!==null) countHtml='<span class="rcount '+(n===0?'zero':'')+'">'+(n===0?'0':fmt(n))+'</span>';
+      else if(pending&&(mainLoaded||bulkyLoaded)) countHtml='<span class="rcount wait">aguarda arquivo</span>';
+      var canDl=res&&!res.pending&&res.ids.length>0;
+      return '<div class="rule '+(rule.vol?'vol':'')+' '+(pending&&(mainLoaded||bulkyLoaded)?'needs':'')+'">'
+        +'<span class="rnum">'+rule.id+'</span>'
+        +'<div class="rbody"><div class="rname">'+rule.label+'</div><div class="rtag">'+rule.tag+'</div></div>'
+        +countHtml
+        +'<button class="btn btn-ghost" '+(canDl?'':'disabled')+' data-dl="'+rule.id+'">&#8595; Baixar</button>'
+        +'</div>';
+    }).join('');
+    Array.prototype.forEach.call(area.querySelectorAll('[data-dl]'),function(b){
+      b.addEventListener('click',function(){dlOne(parseInt(b.getAttribute('data-dl'),10));});
+    });
+  }
+
+  function triggerDownload(content,filename){
+    var blob=new Blob([content],{type:'text/csv;charset=utf-8;'});
+    triggerBlob(blob,filename);
+  }
+  function triggerBlob(blob,filename){
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+    document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},1500);
+  }
+
+  // ---- gerador de ZIP em JS puro (metodo STORE, sem compressao) ----
+  function crc32(bytes){
+    var t=crc32.t||(crc32.t=(function(){var a=[],c;for(var n=0;n<256;n++){c=n;for(var k=0;k<8;k++){c=c&1?(0xEDB88320^(c>>>1)):(c>>>1);}a[n]=c>>>0;}return a;})());
+    var crc=0xFFFFFFFF;
+    for(var i=0;i<bytes.length;i++){crc=(crc>>>8)^t[(crc^bytes[i])&0xFF];}
+    return (crc^0xFFFFFFFF)>>>0;
+  }
+  function makeZipBlob(files){
+    var enc=new TextEncoder(), chunks=[], centrals=[], offset=0;
+    function p32(a,v){a.push(v&0xff,(v>>>8)&0xff,(v>>>16)&0xff,(v>>>24)&0xff);}
+    function p16(a,v){a.push(v&0xff,(v>>>8)&0xff);}
+    files.forEach(function(f){
+      var data=enc.encode(f.content), name=enc.encode(f.name), crc=crc32(data), size=data.length;
+      var lh=[]; p32(lh,0x04034b50); p16(lh,20); p16(lh,0x0800); p16(lh,0); p16(lh,0); p16(lh,0);
+      p32(lh,crc); p32(lh,size); p32(lh,size); p16(lh,name.length); p16(lh,0);
+      for(var i=0;i<name.length;i++) lh.push(name[i]);
+      var lhArr=Uint8Array.from(lh);
+      chunks.push(lhArr); chunks.push(data);
+      var cd=[]; p32(cd,0x02014b50); p16(cd,20); p16(cd,20); p16(cd,0x0800); p16(cd,0); p16(cd,0); p16(cd,0);
+      p32(cd,crc); p32(cd,size); p32(cd,size); p16(cd,name.length); p16(cd,0); p16(cd,0); p16(cd,0); p16(cd,0);
+      p32(cd,0); p32(cd,offset);
+      for(var j=0;j<name.length;j++) cd.push(name[j]);
+      centrals.push(Uint8Array.from(cd));
+      offset+=lhArr.length+size;
+    });
+    var cStart=offset,cSize=0;
+    centrals.forEach(function(c){chunks.push(c); cSize+=c.length;});
+    var e=[]; p32(e,0x06054b50); p16(e,0); p16(e,0); p16(e,files.length); p16(e,files.length);
+    p32(e,cSize); p32(e,cStart); p16(e,0);
+    chunks.push(Uint8Array.from(e));
+    return new Blob(chunks,{type:'application/zip'});
+  }
+  function dlOne(id){
+    var r=results.find(function(x){return x.rule.id===id;});
+    if(!r||r.pending||r.ids.length===0)return;
+    triggerDownload(r.ids.join('\n'),r.rule.file);
+  }
+
+  document.getElementById('btn-all').addEventListener('click',function(){
+    var ready=results.filter(function(r){return !r.pending&&r.ids.length>0;});
+    if(!ready.length)return;
+    var files=ready.map(function(r){return {name:r.rule.file, content:r.ids.join('\n')};});
+    var blob=makeZipBlob(files);
+    triggerBlob(blob,'Roteirizacao_V2_'+dateStr+'.zip');
+    setMsg('ZIP com '+ready.length+' arquivo(s) CSV enviado para Downloads.','ok');
+  });
+
+  document.getElementById('btn-reset').addEventListener('click',function(){
+    rawData=[];bulkyList=[];mainLoaded=false;bulkyLoaded=false;results=[];
+    document.getElementById('fi-main').value='';document.getElementById('fi-bulky').value='';
+    document.getElementById('st-main').textContent='';document.getElementById('st-bulky').textContent='';
+    document.getElementById('stat-rows').textContent='\u2014';document.getElementById('stat-bulky').textContent='\u2014';document.getElementById('stat-total').textContent='\u2014';
+    document.getElementById('btn-all').disabled=true;setMsg('','');renderRules();
+  });
+
+  process();
+})();
+</script>
+</body>
+</html>
